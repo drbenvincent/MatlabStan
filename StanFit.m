@@ -153,11 +153,17 @@ classdef StanFit < handle
          p.addParamValue('pars',{},@(x) iscell(x) || ischar(x));
          p.addParamValue('permuted',true,@islogical);
          p.addParamValue('inc_warmup',false,@islogical);
+		 p.addParamValue('collapseChains',true,@islogical);
          p.parse(varargin{:});
+		 
+		 if  p.Results.permuted && ~p.Results.collapseChains
+			 error('Not collapsing across chains AND permuting is a strange thing to do.')
+		 end
          
          out = self.sim_.extract('names',p.Results.pars,...
                                  'permuted',p.Results.permuted,...
-                                 'inc_warmup',p.Results.inc_warmup);
+                                 'inc_warmup',p.Results.inc_warmup,...
+								 'collapseChains',p.Results.collapseChains);
       end
       
       function process_exit(self,src,~)

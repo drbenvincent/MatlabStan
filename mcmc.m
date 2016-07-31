@@ -145,6 +145,7 @@ classdef mcmc < handle
          p.addParamValue('names',{},@(x) iscell(x) || ischar(x));
          p.addParamValue('permuted',true,@islogical);
          p.addParamValue('inc_warmup',false,@islogical);
+		 p.addParamValue('collapseChains',true,@islogical);
          p.parse(varargin{:});
          
          req_names = p.Results.names;
@@ -189,12 +190,38 @@ classdef mcmc < handle
                      if self.n_warmup(i).(fn{j}) == 0
                         warning('mcmc:extract:IgnoredInput',...
                            'Warmup samples requested, but were not saved when model run');
-                     end
-                     out(i).(fn{j}) = cat(1,out(i).(fn{j}),samples(i).(fn{j})); % VERTCAT
+					 end
+					 if p.Results.collapseChains
+						out(i).(fn{j}) = cat(1,...
+							out(i).(fn{j}),...
+							samples(i).(fn{j})); % VERTCAT
+					 else
+						 error('NOT IMPLEMTED YET')
+						out(i).(fn{j}) = cat(1,...
+							out(i).(fn{j}),...
+							samples(i).(fn{j})); % VERTCAT
+					 end
                   end
                end
-            else
-               out = rmfield(self.samples,setxor(self.names,names));
+			else
+			   if p.Results.collapseChains
+                  out = rmfield(self.samples,setxor(self.names,names));
+			   else % don't collapse chains
+				   clear out
+				   % deal with 'names'
+				   nchains = numel(self.samples); 
+				   for n=1:nchains
+					  tempSamples(n) = rmfield(self.samples(n), setxor(self.names,names));
+				   end
+				   % now collapse each field into arrays of size [nchains, x, y, z ..]
+				   fn = fieldnames(tempSamples);
+				   for f=1:numel(fn)
+					   out.(fn{f}) = zeros([ nchains size(tempSamples(1).(fn{f}))]);
+					   for c=1:nchains
+						   out.(fn{f})(c,:,:)   = tempSamples(c).(fn{f});
+					   end
+				   end
+			   end
             end
          end
       end
